@@ -16,6 +16,9 @@ newtype TypeVarName = TypeVarName B8.ByteString deriving (Eq, Show, Ord)
 
 newtype TIdentifier = TIdentifier B8.ByteString deriving (Eq, Show)
 
+typeVar :: B8.ByteString -> TypeExpr
+typeVar = TypeVar . TypeVarName
+
 -- Types
 arrow t1 t2 = TypeCons (TIdentifier "arrow") [t1, t2]
 

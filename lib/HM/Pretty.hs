@@ -33,16 +33,24 @@ aliasTypevar texpr =
 prettyExpr :: Expr -> String
 prettyExpr expr =
   case expr of
-    (Var (VarName a)) -> B8.unpack a
-    (Lambda (VarName i) e) -> "\\" ++ B8.unpack i ++ " -> " ++ prettyExpr e
-    (Ap e1 e2) -> prettyExpr e1 ++ " (" ++ prettyExpr e2 ++ ")"
-    (Let ids exprs expr') ->
+    Var (VarName a) -> B8.unpack a
+    Lambda (VarName i) e -> "\\" ++ B8.unpack i ++ " -> " ++ prettyExpr e
+    Ap e1 e2 -> prettyExpr e1 ++ " (" ++ prettyExpr e2 ++ ")"
+    Let ids exprs expr' ->
       let t = zip ids exprs
-          lns = map (\(VarName a, b) -> B8.unpack a ++ " = " ++ prettyExpr b ++ "\n") t
-       in "let\n  " ++ concat lns ++ "in " ++ prettyExpr expr'
-    (LetRec ids exprs expr') ->
+          lns = map (\(VarName a, b) -> "  " ++ B8.unpack a ++ " = " ++ prettyExpr b ++ "\n") t
+       in "let" ++ concat lns ++ "in " ++ prettyExpr expr'
+    LetRec ids exprs expr' ->
       let t = zip ids exprs
-          lns = map (\(VarName a, b) -> B8.unpack a ++ " = " ++ prettyExpr b ++ "\n") t
-       in "let\n  " ++ concat lns ++ "in " ++ prettyExpr expr'
-    (ELit (LInt a)) -> show a
-    (ELit (LBool a)) -> show a
+          lns = map (\(VarName a, b) -> "\n  " ++ B8.unpack a ++ " = " ++ prettyExpr b) t
+       in "let" ++ concat lns ++ "\nin " ++ prettyExpr expr'
+    ELit (LInt a) -> show a
+    ELit (LBool a) -> show a
+    Case e p es ->
+      "\\case " ++ prettyExpr e ++ ": " ++ (concat $ fmap (\(a, b) -> prettyPatn a ++ " -> " ++ prettyExpr b ++ "; ") $ zip p es)
+
+prettyPatn p =
+  case p of
+    PatnVar (VarName a) -> B8.unpack a
+    PatnHole -> "_"
+    PatnLit lit -> show lit

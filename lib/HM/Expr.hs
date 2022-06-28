@@ -14,7 +14,10 @@ data Expr
   | Ap Expr Expr
   | Let [VarName] [Expr] Expr
   | LetRec [VarName] [Expr] Expr
+  | Case Expr [Patn] [Expr]
   | ELit Lit
   deriving (Show)
+
+data Patn = PatnHole | PatnLit Lit | PatnVar VarName deriving (Show, Eq)
 
 data Lit = LInt Int | LBool Bool deriving (Show, Eq)

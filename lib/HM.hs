@@ -20,8 +20,19 @@ ap e1 e2 = Ap e1 e2
 
 litInt = ELit . LInt
 
+litBool = ELit . LBool
+
+lamcase e p es = Case e p es
+
+patvar = PatnVar
+
+pathole = PatnHole
+
+patlit = PatnLit
+
 runInfer expr =
   case typeCheck (TypeEnv M.empty) (startNameSeed) expr of
-    Ok (_, t) ->
+    Ok (_, s, t) ->
       putStrLn . concat $ [prettyExpr expr, "\n-------------------\n", "Infer: ", aliasTypevar t, "\n"]
-    Fail f -> print f
+    Fail f ->
+      putStrLn . concat $ [prettyExpr expr, "\n-------------------\n", "Error: ", f, "\n"]

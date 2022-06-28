@@ -10,6 +10,7 @@ module HM.NameSeed (
   varNameNs,
   increaseNsIndex,
   prefixSequence,
+  zipWithNs,
 ) where
 
 import qualified Data.ByteString as B
@@ -24,11 +25,18 @@ instance Show NameSeed where
 
 charCodeA = fromIntegral $ ord 'a'
 
-startNameSeed = NameSeed 0 1
+startNameSeed = NameSeed 1 1
 
 increaseNsPrefix (NameSeed c _) = NameSeed (c + 1) 1
 
 increaseNsIndex (NameSeed c i) = NameSeed c (i + 1)
+
+zipWithNs xs ns = zipWithNs' xs (ns, [])
+
+zipWithNs' [] (ns, acc) = (ns, reverse acc)
+zipWithNs' (x : xs) (ns, acc) = zipWithNs' xs (ns', (ns, x) : acc)
+ where
+  ns' = increaseNsPrefix ns
 
 varNameSequence ns = seqNS' ns 0
  where

@@ -22,7 +22,7 @@ prettyTexpr tmap texpr =
     (TypeCons (TIdentifier "bool") _) -> "Bool"
     (TypeCons (TIdentifier "arrow") [a, b]) ->
       "(" ++ prettyTexpr tmap a ++ " -> " ++ prettyTexpr tmap b ++ ")"
-    _ -> "?"
+    (TypeCons (TIdentifier n) es) -> show n ++ " " ++ (unwords $ fmap (prettyTexpr tmap) es)
 
 aliasTypevar :: TypeExpr -> String
 aliasTypevar texpr =
@@ -46,6 +46,7 @@ prettyExpr expr =
        in "let" ++ concat lns ++ "\nin " ++ prettyExpr expr'
     ELit (LInt a) -> show a
     ELit (LBool a) -> show a
+    Adt (ConsName n) es -> B8.unpack n ++ " " ++ (unwords $ fmap prettyExpr es)
     Case e p es ->
       "\\case " ++ prettyExpr e ++ ": " ++ (concat $ fmap (\(a, b) -> prettyPatn a ++ " -> " ++ prettyExpr b ++ "; ") $ zip p es)
 
@@ -54,3 +55,4 @@ prettyPatn p =
     PatnVar (VarName a) -> B8.unpack a
     PatnHole -> "_"
     PatnLit lit -> show lit
+    PatnCons (Cons (ConsName c) as) -> B8.unpack c ++ " " ++ (unwords $ fmap prettyPatn as)

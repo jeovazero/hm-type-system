@@ -2,11 +2,10 @@
 
 module HM where
 
-import qualified Data.Map as M
 import HM.Expr
 import HM.Infer
-import HM.NameSeed (startNameSeed)
 import HM.Pretty
+import HM.TypeExpr
 
 varn = VarName
 
@@ -30,8 +29,20 @@ pathole = PatnHole
 
 patlit = PatnLit
 
-runInfer expr =
-  case typeCheck (TypeEnv M.empty) (startNameSeed) expr of
+patcons name = PatnCons name
+
+adt name es = Adt name es
+cons name args = Cons name args
+consName = ConsName 
+dataType = DataType
+consType = DataConsType
+tid = TIdentifier
+tvar = TypeVarName
+initEnv = startEnv
+
+runInfer = runInferEnv startEnv
+runInferEnv env expr =
+  case typeCheck env expr of
     Ok (_, s, t) ->
       putStrLn . concat $ [prettyExpr expr, "\n-------------------\n", "Infer: ", aliasTypevar t, "\n"]
     Fail f ->

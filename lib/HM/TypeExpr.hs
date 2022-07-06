@@ -14,7 +14,7 @@ data TypeExpr
 
 newtype TypeVarName = TypeVarName B8.ByteString deriving (Eq, Show, Ord)
 
-newtype TIdentifier = TIdentifier B8.ByteString deriving (Eq, Show)
+newtype TIdentifier = TIdentifier B8.ByteString deriving (Eq, Show, Ord)
 
 typeVar :: B8.ByteString -> TypeExpr
 typeVar = TypeVar . TypeVarName

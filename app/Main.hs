@@ -3,6 +3,8 @@
 module Main where
 
 import HM
+import HM.TypeExpr
+import HM.Infer
 
 main :: IO ()
 main = do
@@ -28,3 +30,13 @@ main = do
       )
 
   runInfer $ letrec ["faa", "const"] [lam "x" (var "x"),lam "x" (lam "y" (var "x"))] (ap (var "const") (litInt 10))
+
+  let d = dataType (tid "Maybe") [tvar "a"]
+  let cs = [consType (consName "Just") [typeVar "a"]]
+  let env = insertDataTypeEnv d cs initEnv 
+  runInferEnv env $ (adt (consName "Just") [litInt 10])
+
+  runInferEnv env $
+    lamcase
+      (adt (consName "Just") [litBool True])
+      [patcons (cons (consName "Just") [patvar $ varn "x"]), pathole] [var "x", litInt 10]

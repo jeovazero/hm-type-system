@@ -42,6 +42,10 @@ composeSubst s1@(Subst sub1) (Subst sub2) = Subst $ M.union sub2' sub1
  where
   sub2' = (M.map (applySubstType s1) sub2)
 
+applySubstTypeList :: Subst -> [TypeExpr] -> [TypeExpr]
+applySubstTypeList sub = fmap (applySubstType sub)
+
+
 --
 -- UNIFICATION
 --
@@ -104,6 +108,10 @@ zipVarsScheme :: [VarName] -> NameSeed -> [(VarName, TypeScheme)]
 zipVarsScheme vars ns =
   zip vars $ map (\x -> Scheme S.empty (TypeVar $ TypeVarName x)) $ varNameSequence ns
 
+typeExprFromScheme :: TypeScheme -> TypeExpr
+typeExprFromScheme (Scheme _ texpr) = texpr
+
+
 --
 -- TYPE ENV
 --
@@ -130,10 +138,13 @@ typeEnvFromVars ns vars =
 unionTypeEnv' :: TypeEnv -> TypeEnv -> TypeEnv
 unionTypeEnv' (TypeEnv te1) (TypeEnv te2) = TypeEnv $ M.union te2 te1
 
-typesFromVarsTenv vars (TypeEnv tenv) = catMaybes $ fmap (\v -> fmap (\(Scheme _ t) -> t) $ M.lookup v tenv ) $ vars
+typesFromVarsTenv :: [VarName] -> TypeEnv -> [TypeExpr]
+typesFromVarsTenv vars (TypeEnv tenv) =
+  catMaybes
+    $ fmap (\v -> fmap typeExprFromScheme $ M.lookup v tenv ) $ vars
 
+keysTenv :: TypeEnv -> [VarName]
 keysTenv (TypeEnv tenv) = M.keys tenv
-
 
 
 --
@@ -141,6 +152,7 @@ keysTenv (TypeEnv tenv) = M.keys tenv
 --
 
 {-
+  {DataType} = [DataConsType]+
   data T a b c = K b a Int | M c c
   Scheme [a,b,c] (TCons T [a,b,c])
 
@@ -154,10 +166,6 @@ emptyDataTypeEnv = DataTypeEnv M.empty
 
 data DataType = DataType TIdentifier [TypeVarName]
 data DataConsType = DataConsType ConsName [TypeExpr]
-
-
-applySubstTypeList :: Subst -> [TypeExpr] -> [TypeExpr]
-applySubstTypeList sub = fmap (applySubstType sub)
 
 newDataInstance :: NameSeed -> DataScheme -> (Subst, [TypeExpr], TypeExpr)
 newDataInstance ns (DataScheme (Scheme snames texpr) texprs) = (sub, texprs', texpr')
@@ -226,6 +234,7 @@ typeCheck env@(Env tenv _ ns) expr =
     Let xs es e -> typeCheckLet env xs es e
     LetRec xs es e -> typeCheckLetRec env xs es e
     Case e pats es -> typeCheckCase env e pats es
+    Guard cExpr gExprs exprs elseExpr -> typeCheckGuard env cExpr gExprs exprs elseExpr
     ELit lit -> typeCheckLit (nameSeed env) lit
     Adt cname es -> typeCheckDataType env cname es
 
@@ -429,3 +438,53 @@ typeCheckPatnList [] (Ok (env, sub, texp)) acc = Ok (env, sub, reverse $ texp:ac
 typeCheckPatnList _ (Fail f) _ = Fail f
 typeCheckPatnList (p:ps) (Ok (env, sub, texpr)) acc =
   typeCheckPatnList ps (typeCheckPatn True env sub p) (texpr:acc)
+
+--- Guard
+typeCheckGuard :: Env -> Expr -> [Expr] -> [Expr] -> Expr -> Result (NameSeed, Subst, TypeExpr)
+typeCheckGuard env condExpr guardExprs exprs elseExpr =
+  case typeCheck env condExpr of
+    Fail f -> Fail f
+    Ok (env',sub,texpr) ->
+      case (zip guardExprs exprs) of
+        [] -> Fail "Missing guard expressions"
+        (x:xs) -> 
+          let 
+            fmapTexpr = everyOrFail . fmap (mapResult (\(_,_,t) -> t) . typeCheck env)
+            tGuardExprs = fmapTexpr guardExprs
+            tExprs = fmapTexpr (exprs ++ [elseExpr])
+
+            unifyResult tpe tpes = constResult tpe $ unifyListBy sub tpe tpes
+
+            rGuardExprs = flattenResult $ mapResult (unifyResult texpr) tGuardExprs
+            rExprs = flattenResult $ mapResult (\(e:es) -> unifyResult e es) tExprs
+
+            ans = continueOrFail rGuardExprs rExprs
+          in
+            case ans of
+              Fail f -> Fail f
+              Ok (texpr') -> Ok (nameSeed env, emptySubst, texpr')
+            
+unifyListBy :: Subst -> TypeExpr -> [TypeExpr] -> Result Subst
+unifyListBy sub tpe (t:ts) = foldl' (\acc c -> continueOrFail acc $ uni c) (uni t) ts
+  where uni a = unify sub (tpe, a)
+
+everyOrFail :: [Result a] -> Result [a]
+everyOrFail (x:xs) = mapResult reverse $ foldl' accOrFail x' xs
+  where x' = mapResult (\a -> [a]) x
+
+accOrFail ff@(Fail f) _ = Fail f
+accOrFail (Ok acc) (Ok c) = Ok (c:acc)
+accOrFail (Ok _) ff@(Fail f) = Fail f
+
+continueOrFail ff@(Fail f) _ = ff
+continueOrFail (Ok _) r = r
+
+mapResult _ (Fail e) = Fail e
+mapResult g (Ok a) = Ok $ g a
+            
+flattenResult (Ok (Ok a)) = Ok a
+flattenResult (Ok (Fail f)) = Fail f
+flattenResult (Fail f) = Fail f
+
+constResult a = mapResult (const a)
+

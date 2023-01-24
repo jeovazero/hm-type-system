@@ -49,6 +49,8 @@ prettyExpr expr =
     Adt (ConsName n) es -> B8.unpack n ++ " " ++ (unwords $ fmap prettyExpr es)
     Case e p es ->
       "\\case " ++ prettyExpr e ++ ": " ++ (concat $ fmap (\(a, b) -> prettyPatn a ++ " -> " ++ prettyExpr b ++ "; ") $ zip p es)
+    Guard e ges es ee ->
+      "\\guard " ++ prettyExpr e ++ ": " ++ (concat $ fmap (\(a,b) -> prettyExpr a ++ " = " ++ prettyExpr b ++ "| ") $ zip ges es) ++ "\n else = " ++ prettyExpr ee
 
 prettyPatn p =
   case p of

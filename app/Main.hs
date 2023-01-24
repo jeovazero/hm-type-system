@@ -40,3 +40,5 @@ main = do
     lamcase
       (adt (consName "Just") [litBool True])
       [patcons (cons (consName "Just") [patvar $ varn "x"]), pathole] [var "x", litInt 10]
+
+  runInfer $ lamguard (litBool True) [litBool True, litBool False] [litInt 1, litInt 2] (litInt 3) 

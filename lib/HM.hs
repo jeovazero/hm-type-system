@@ -23,6 +23,8 @@ litBool = ELit . LBool
 
 lamcase e p es = Case e p es
 
+lamguard e ges es elseE = Guard e ges es elseE
+
 patvar = PatnVar
 
 pathole = PatnHole
@@ -43,7 +45,20 @@ initEnv = startEnv
 runInfer = runInferEnv startEnv
 runInferEnv env expr =
   case typeCheck env expr of
-    Ok (_, s, t) ->
-      putStrLn . concat $ [prettyExpr expr, "\n-------------------\n", "Infer: ", aliasTypevar t, "\n"]
+    Ok (_, s, t) -> do
+        print s
+        putStrLn .
+          concat $ [ prettyExpr expr
+                   , "\n-------------------\n"
+                   , "Infer: "
+                   , aliasTypevar t
+                   , "\n"
+                   ]
     Fail f ->
-      putStrLn . concat $ [prettyExpr expr, "\n-------------------\n", "Error: ", f, "\n"]
+      putStrLn .
+        concat $ [ prettyExpr expr
+                 , "\n-------------------\n"
+                 , "Error: "
+                 , f
+                 , "\n"
+                 ]

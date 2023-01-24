@@ -16,6 +16,7 @@ data Expr
   | Let [VarName] [Expr] Expr
   | LetRec [VarName] [Expr] Expr
   | Case Expr [Patn] [Expr]
+  | Guard Expr [Expr] [Expr] Expr
   | ELit Lit
   | Adt ConsName [Expr]
   deriving (Show)

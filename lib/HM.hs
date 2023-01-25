@@ -5,7 +5,10 @@ module HM where
 import HM.Expr
 import HM.Infer
 import HM.Pretty
-import HM.TypeExpr
+import HM.Result
+import HM.Env
+import HM.Env.DataTypeEnv
+import HM.Type.TypeExpr
 
 varn = VarName
 
@@ -17,9 +20,7 @@ lam v e = Lambda (varn v) e
 
 ap e1 e2 = Ap e1 e2
 
-litInt = ELit . LInt
-
-litBool = ELit . LBool
+litInt = ELit LInt
 
 lamcase e p es = Case e p es
 
@@ -45,8 +46,7 @@ initEnv = startEnv
 runInfer = runInferEnv startEnv
 runInferEnv env expr =
   case typeCheck env expr of
-    Ok (_, s, t) -> do
-        print s
+    Ok (_, _, t) -> do
         putStrLn .
           concat $ [ prettyExpr expr
                    , "\n-------------------\n"

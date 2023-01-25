@@ -23,6 +23,6 @@ data Expr
 
 data Patn = PatnHole | PatnLit Lit | PatnVar VarName | PatnCons Cons deriving (Show, Eq)
 
-data Lit = LInt Int | LBool Bool deriving (Show, Eq)
+data Lit = LInt deriving (Show, Eq)
 
 data Cons = Cons ConsName [Patn] deriving (Show, Eq)

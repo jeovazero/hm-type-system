@@ -8,7 +8,7 @@ import qualified Data.Set as S
 import HM.Expr
 import HM.Infer
 import HM.NameSeed
-import HM.TypeExpr
+import HM.Type.TypeExpr
 
 lookupTmap tmap k =
   case M.lookup k tmap of
@@ -44,13 +44,12 @@ prettyExpr expr =
       let t = zip ids exprs
           lns = map (\(VarName a, b) -> "\n  " ++ B8.unpack a ++ " = " ++ prettyExpr b) t
        in "let" ++ concat lns ++ "\nin " ++ prettyExpr expr'
-    ELit (LInt a) -> show a
-    ELit (LBool a) -> show a
+    ELit LInt -> "Int"
     Adt (ConsName n) es -> B8.unpack n ++ " " ++ (unwords $ fmap prettyExpr es)
     Case e p es ->
       "\\case " ++ prettyExpr e ++ ": " ++ (concat $ fmap (\(a, b) -> prettyPatn a ++ " -> " ++ prettyExpr b ++ "; ") $ zip p es)
     Guard e ges es ee ->
-      "\\guard " ++ prettyExpr e ++ ": " ++ (concat $ fmap (\(a,b) -> prettyExpr a ++ " = " ++ prettyExpr b ++ "| ") $ zip ges es) ++ "\n else = " ++ prettyExpr ee
+      "\\guard " ++ prettyExpr e ++ "| " ++ (concat $ fmap (\(a,b) -> prettyExpr a ++ " = " ++ prettyExpr b ++ " | ") $ zip ges es) ++ "else = " ++ prettyExpr ee
 
 prettyPatn p =
   case p of

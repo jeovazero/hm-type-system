@@ -9,15 +9,12 @@ import HM.Type.TypeScheme
 import HM.Env.TypeEnv
 import HM.Env.DataTypeEnv
 import HM.NameSeed
-import HM.Result
 import HM.Expr
 import Data.List
 
 --
 -- ENV
 --
-
-type InferResult = Result (NameSeed, Subst, TypeExpr)
 
 data Env = Env TypeEnv DataTypeEnv NameSeed
 

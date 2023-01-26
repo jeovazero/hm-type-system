@@ -15,28 +15,31 @@ import HM.Type.TypeExpr
 import HM.Type.TypeScheme
 import HM.Type.Unification
 
+
+type InferResult = Result (Env, Subst, TypeExpr)
+
 --
 -- TYPE CHECKER
 --
-typeCheck :: Env -> Expr -> Result (NameSeed, Subst, TypeExpr)
-typeCheck env@(Env tenv _ ns) expr =
+typeCheck :: Env -> Expr -> InferResult
+typeCheck env expr =
   case expr of
-    Var tname -> typeCheckVar tenv ns tname
+    Var tname -> typeCheckVar env tname
     Ap e1 e2 -> typeCheckAp env e1 e2
     Lambda x e -> typeCheckLambda env x e
     Let xs es e -> typeCheckLet env xs es e
     LetRec xs es e -> typeCheckLetRec env xs es e
     Case e pats es -> typeCheckCase env e pats es
     Guard cExpr gExprs exprs elseExpr -> typeCheckGuard env cExpr gExprs exprs elseExpr
-    ELit lit -> typeCheckLit (nameSeed env) lit
+    ELit lit -> typeCheckLit env lit
     Adt cname es -> typeCheckDataType env cname es
 
-typeCheckLit :: a -> Lit -> Result (a, Subst, TypeExpr)
-typeCheckLit ns LInt = Ok (ns, emptySubst, int)
+typeCheckLit :: Env -> Lit -> InferResult
+typeCheckLit env LInt = Ok (env, emptySubst, int)
 
 -- List expr
 typeCheckList :: Env -> [Expr] -> Result (NameSeed, Subst, [TypeExpr])
-typeCheckList tenv es = typeCheckList' tenv es $ Ok (emptySubst, [])
+typeCheckList env es = typeCheckList' env es $ Ok (emptySubst, [])
 
 typeCheckList' :: Env -> [Expr] -> Result (Subst, [TypeExpr]) -> Result (NameSeed, Subst, [TypeExpr])
 typeCheckList' env [] (Ok (sub, ts)) = Ok (nameSeed env, sub, reverse ts)
@@ -44,20 +47,20 @@ typeCheckList' _ _ (Fail f) = Fail f
 typeCheckList' env (e : es) (Ok (sub, texprs)) =
   case typeCheck env e of
     Fail f -> Fail f
-    Ok (ns', sub', texpr) ->
-      let env' = updateNameSeed ns' . applySubstTypeEnv sub' $ env
+    Ok (env', sub', texpr) ->
+      let env'' = applySubstTypeEnv sub' env'
           acc' = Ok (composeSubst sub sub', (applySubstType sub' texpr) : texprs)
-       in typeCheckList' env' es acc'
+       in typeCheckList' env'' es acc'
 
 -- Var
-typeCheckVar :: TypeEnv -> NameSeed -> VarName -> Result (NameSeed, Subst, TypeExpr)
-typeCheckVar (TypeEnv tenv) ns tvar =
-  case M.lookup tvar tenv of
-    Just scheme -> Ok (increaseNsPrefix ns, emptySubst, newInstance ns scheme)
+typeCheckVar :: Env -> VarName -> InferResult
+typeCheckVar env tvar =
+  case lookupTypeEnv tvar env of
+    Just scheme -> Ok (increaseNameSeed env, emptySubst, newInstance (nameSeed env) scheme)
     Nothing -> Fail $ "unbound variable: " ++ show tvar
 
 -- AP
-typeCheckAp :: Env -> Expr -> Expr -> Result (NameSeed, Subst, TypeExpr)
+typeCheckAp :: Env -> Expr -> Expr -> InferResult
 typeCheckAp env e1 e2 =
   let ns = nameSeed env
       tname = TypeVarName $ varNameNs ns
@@ -70,7 +73,7 @@ typeCheckAp env e1 e2 =
           -- t1 unify (t2 -> t')
           case unify sub (t1, arrow t2 (TypeVar tname)) of
             Fail f -> Fail f
-            Ok sub' -> Ok (ns'', sub', subst sub' tname) -- t'
+            Ok sub' -> Ok (updateNameSeed ns'' env', sub', subst sub' tname) -- t'
         _ -> Fail $ "Unexpected error: expected typeCheckList " ++ show [e1, e2]
 
 -- Lambda
@@ -96,10 +99,10 @@ typeCheckLet env lvars rexprs expr =
           env'' = increaseNameSeed $ addDeclarations env' lvars tyRexprs
        in case typeCheck env'' expr of
             Fail f -> Fail f
-            Ok (ns'', sub', texpr) -> Ok (ns'', composeSubst sub' subRexprs, texpr)
+            Ok (env''', sub', texpr) -> Ok (env''', composeSubst sub' subRexprs, texpr)
 
 -- Let Rec
-typeCheckLetRec :: Env -> [VarName] -> [Expr] -> Expr -> Result (NameSeed, Subst, TypeExpr)
+typeCheckLetRec :: Env -> [VarName] -> [Expr] -> Expr -> InferResult 
 typeCheckLetRec env vars es expr =
   let newTenv = typeEnvFromVars (nameSeed env) vars
       -- a TypeEnv with the new vars/scheme
@@ -119,9 +122,9 @@ typeCheckLetRec env vars es expr =
                       gamma''' = increaseNameSeed $ addDeclarations gamma'' vars ts''
                    in case typeCheck gamma''' expr of
                         Fail f -> Fail f
-                        Ok (ns4, sub'', texpr) -> Ok (ns4, composeSubst sub'' sub', texpr)
+                        Ok (env'', sub'', texpr) -> Ok (env'', composeSubst sub'' sub', texpr)
 
-typeCheckDataType :: Env -> ConsName -> [Expr] -> Result (NameSeed, Subst, TypeExpr)
+typeCheckDataType :: Env -> ConsName -> [Expr] -> InferResult
 typeCheckDataType env consn exprs =
   case lookupDataEnv consn env of
     Nothing -> Fail $ "Hmmm constructor not found in the env; cons name: " ++ show consn
@@ -136,31 +139,31 @@ typeCheckDataType env consn exprs =
                     Fail f -> Fail $ "Error when typechecking datatype: " ++ f
                     Ok sub3 ->
                       let sub4 = composeSubst sub2 sub3
-                       in Ok (ns, sub4, applySubstType sub4 dtexpr)
+                       in Ok (updateNameSeed ns env, sub4, applySubstType sub4 dtexpr)
 
-typeCheckCase :: Env -> Expr -> [Patn] -> [Expr] -> Result (NameSeed, Subst, TypeExpr)
+typeCheckCase :: Env -> Expr -> [Patn] -> [Expr] -> InferResult
 typeCheckCase env expr pats exprs =
   case typeCheck env expr of
     Fail f -> Fail f
-    Ok (ns', sub, texpr) ->
+    Ok (env', sub, texpr) ->
       case zip pats exprs of
         [] -> Fail "Missing case patterns"
-        (x : xs) -> typeCheckCaseList env sub texpr xs (typeCheckOneCase (updateNameSeed ns' env) sub texpr x)
+        (x : xs) -> typeCheckCaseList env sub texpr xs (typeCheckOneCase env' sub texpr x)
 
 typeCheckCaseList :: Env -> Subst -> TypeExpr -> [(Patn, Expr)] -> InferResult -> InferResult
 typeCheckCaseList _ _ _ [] acc = acc
 typeCheckCaseList _ _ _ _ (Fail f) = Fail f
-typeCheckCaseList env sub1 texpr (x : xs) (Ok (ns, sub2, texpr1)) =
+typeCheckCaseList env sub1 texpr (x : xs) (Ok (env', sub2, texpr1)) =
   let sub3 = composeSubst sub1 sub2
-   in case typeCheckOneCase (updateNameSeed ns env) sub1 texpr x of
+   in case typeCheckOneCase env' sub1 texpr x of
         Fail f -> Fail f
-        Ok (ns', sub4, texpr2) ->
+        Ok (env'', sub4, texpr2) ->
           let sub5 = composeSubst sub3 sub4
            in case unify sub5 (texpr1, texpr2) of
                 Fail f -> Fail f
-                Ok sub6 -> typeCheckCaseList env sub1 texpr xs (Ok (ns', sub6, texpr2))
+                Ok sub6 -> typeCheckCaseList env sub1 texpr xs (Ok (env'', sub6, texpr2))
 
-typeCheckOneCase :: Env -> Subst -> TypeExpr -> (Patn, Expr) -> Result (NameSeed, Subst, TypeExpr)
+typeCheckOneCase :: Env -> Subst -> TypeExpr -> (Patn, Expr) -> InferResult
 typeCheckOneCase env sub texpr (patn, expr) =
   case typeCheckPatn False env sub patn of
     Fail f -> Fail f
@@ -184,7 +187,7 @@ typeCheckPatn isPatScope env sub pat =
             False -> Ok (env', sub, tvar)
             True -> Fail $ "Variable " ++ show varn ++ " already bound"
     PatnLit lit ->
-      case typeCheckLit (nameSeed env) lit of
+      case typeCheckLit env lit of
         Ok (_, sub', texpr) -> Ok (env, composeSubst sub sub', texpr)
         _ -> Fail $ "Unexpected error when typechecking patnlit " ++ show pat
     PatnHole -> Ok (env, sub, typeVar $ nextNameSeed env)
@@ -216,7 +219,7 @@ typeCheckPatnList (p : ps) (Ok (env, sub, texpr)) acc =
   typeCheckPatnList ps (typeCheckPatn True env sub p) (texpr : acc)
 
 --- Guard
-typeCheckGuard :: Env -> Expr -> [Expr] -> [Expr] -> Expr -> Result (NameSeed, Subst, TypeExpr)
+typeCheckGuard :: Env -> Expr -> [Expr] -> [Expr] -> Expr -> InferResult
 typeCheckGuard env condExpr guardExprs exprs elseExpr =
   case typeCheck env condExpr of
     Fail f -> Fail f
@@ -236,4 +239,4 @@ typeCheckGuard env condExpr guardExprs exprs elseExpr =
               ans = continueOrFail rGuardExprs rExprs
            in case ans of
                 Fail f -> Fail f
-                Ok texpr' -> Ok (nameSeed env, emptySubst, texpr')
+                Ok texpr' -> Ok (env, emptySubst, texpr')

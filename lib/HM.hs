@@ -7,8 +7,11 @@ import HM.Infer
 import HM.Pretty
 import HM.Result
 import HM.Env
+import HM.Env.TypeEnv
 import HM.Env.DataTypeEnv
 import HM.Type.TypeExpr
+import qualified Data.Map as M
+import HM.Type.TypeScheme
 
 varn = VarName
 
@@ -40,25 +43,15 @@ consName = ConsName
 dataType = DataType
 consType = DataConsType
 tid = TIdentifier
-tvar = TypeVarName
+tVarName = TypeVarName
 initEnv = startEnv
 
-runInfer = runInferEnv startEnv
+aliasTypeEnv :: TypeEnv -> M.Map VarName String
+aliasTypeEnv (TypeEnv tenvMap) = M.map (aliasTypevar . typeExprFromScheme) tenvMap
+
+runInferEnv :: Env -> Expr -> Either String (Env, TypeExpr)
 runInferEnv env expr =
   case typeCheck env expr of
-    Ok (_, _, t) -> do
-        putStrLn .
-          concat $ [ prettyExpr expr
-                   , "\n-------------------\n"
-                   , "Infer: "
-                   , aliasTypevar t
-                   , "\n"
-                   ]
-    Fail f ->
-      putStrLn .
-        concat $ [ prettyExpr expr
-                 , "\n-------------------\n"
-                 , "Error: "
-                 , f
-                 , "\n"
-                 ]
+    Ok (renv, _, t) -> Right (renv, t)
+    Fail f -> Left f
+

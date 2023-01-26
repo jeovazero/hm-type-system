@@ -25,7 +25,7 @@ instance Show NameSeed where
 
 charCodeA = fromIntegral $ ord 'a'
 
-startNameSeed = NameSeed 1 1
+startNameSeed = NameSeed 0 1
 
 increaseNsPrefix (NameSeed c _) = NameSeed (c + 1) 1
 

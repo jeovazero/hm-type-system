@@ -6,7 +6,6 @@ import qualified Data.ByteString.Char8 as B8
 import qualified Data.Map as M
 import qualified Data.Set as S
 import HM.Expr
-import HM.Infer
 import HM.NameSeed
 import HM.Type.TypeExpr
 

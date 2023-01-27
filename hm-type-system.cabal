@@ -47,7 +47,7 @@ library
     import:           deps
     hs-source-dirs:   lib
     build-depends:    pretty-simple
-    exposed-modules:  HM, HM.Env, HM.Infer, HM.NameSeed, HM.Pretty, HM.Result,
+    exposed-modules:  HM, HM.Env, HM.Infer, HM.NameSeed, HM.Pretty, HM.Result, HM.Expr,
                       HM.Env.DataTypeEnv, HM.Env.TypeEnv,
                       HM.Type.Ops, HM.Type.Subst, HM.Type.TypeExpr,
                       HM.Type.TypeScheme, HM.Type.Unification

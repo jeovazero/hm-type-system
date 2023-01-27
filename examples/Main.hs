@@ -10,11 +10,13 @@ import HM.Pretty
 
 env = 
   let
+    -- Maybe a = Just a | Nothing
     maybeDT = dataType (tid "Maybe") [tVarName "a"]
     maybeCons = [ consType (consName "Just") [typeVar "a"]
                 , consType (consName "Nothing") []
                 ]
 
+    -- Bool = True | False
     boolDT = dataType (tid "Bool") []
     boolCons = [ consType (consName "True") []
                , consType (consName "False") []
@@ -42,7 +44,7 @@ printInfer expr = do
                    , aliasTypevar texpr 
                    , "\n"
                    ]
-      print . aliasTypeEnv $ typeEnv renv
+      -- print . aliasTypeEnv $ typeEnv renv
 
     Left msg -> do
       putStrLn .

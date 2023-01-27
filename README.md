@@ -2,18 +2,24 @@
 
 using simple haskell
 
-```hs
--- app/Main.hs
-
-main = do
-  runInfer $ letrec ["id"] [lam "x" (var "x")] (var "id")
-  runInfer $ letrec ["fix"] [lam "f" (ap (var "f") (ap (var "fix") (var "f")))] (var "fix")
-  runInfer $ letrec ["id"] [lam "x" (var "x")] (ap (var "id") (var "id"))
-  runInfer $ letrec ["id"] [lam "x" (var "x")] (ap (var "id") (litInt 10))
 ```
+$ runhaskell -ilib examples/Main.hs
+False 
+-------------------
+Infer: "Bool" 
 
-```bash
-$ runhaskell -ilib app/Main.hs
+True 
+-------------------
+Infer: "Bool" 
+
+Just False 
+-------------------
+Infer: "Maybe" "Bool" 
+
+Nothing 
+-------------------
+Infer: "Maybe" a
+
 let
   id = \x -> x
 in id
@@ -25,16 +31,4 @@ let
 in fix
 -------------------
 Infer: ((a -> a) -> a)
-
-let
-  id = \x -> x
-in id (id)
--------------------
-Infer: (a -> a)
-
-let
-  id = \x -> x
-in id (10)
--------------------
-Infer: Int
 ```

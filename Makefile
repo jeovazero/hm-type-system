@@ -1,6 +1,6 @@
 build:
 	nix-build default.nix
 run:
-	runhaskell -ilib app/Main.hs
+	runhaskell -ilib examples/Main.hs
 format:
 	fourmolu -i $$(find . -name '*.hs')

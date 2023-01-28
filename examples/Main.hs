@@ -7,6 +7,8 @@ import HM.Type.TypeExpr
 import HM.Env
 import Data.List
 import HM.Pretty
+import qualified Data.Set as S
+import HM.Type.TypeScheme
 
 env = 
   let
@@ -21,10 +23,15 @@ env =
     boolCons = [ consType (consName "True") []
                , consType (consName "False") []
                ]
+    unitDT = dataType (tid "Unit") []
+    unitCons = [ consType (consName "Unit") []]
 
-    dts = [(maybeDT,maybeCons), (boolDT,boolCons)]
+    dts = [(maybeDT,maybeCons), (boolDT,boolCons), (unitDT,unitCons)]
+
+    printTE = (varn "print", tscheme [tVarName "a"] (arrow (typeVar "a") (tcons "Unit" [])) )
+    envDt = foldl' (\e (dt,cs) -> insertDataTypeEnv dt cs e) initEnv dts
  in
-    foldl' (\e (dt,cs) -> insertDataTypeEnv dt cs e) initEnv dts
+   insertVarTypeSchemeEnv printTE envDt
 
 boolTrue = adt (consName "True") []
 boolFalse = adt (consName "False") []
@@ -98,3 +105,6 @@ main = do
 
   printInfer $ lamguard boolTrue [boolTrue, boolFalse] [litInt, litInt] litInt 
   printInfer $ lamguard boolTrue [boolTrue, boolFalse] [litInt, boolFalse] litInt 
+
+  printInfer $ var "print"
+  printInfer $ ap (var "print") boolTrue

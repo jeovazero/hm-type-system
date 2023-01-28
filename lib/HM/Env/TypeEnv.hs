@@ -28,6 +28,10 @@ insertVarTypeEnv' :: (VarName, TypeExpr) -> TypeEnv -> TypeEnv
 insertVarTypeEnv' (v,texpr) (TypeEnv tenv) =
   TypeEnv $ M.insert v (Scheme S.empty texpr) tenv
 
+insertVarTypeEnv'' :: (VarName, TypeScheme) -> TypeEnv -> TypeEnv
+insertVarTypeEnv'' (v,tschm) (TypeEnv tenv) =
+  TypeEnv $ M.insert v tschm tenv
+
 typeEnvFromVars :: NameSeed -> [VarName] -> TypeEnv
 typeEnvFromVars ns vars =
   let schemeVars = zipVarsScheme vars ns

@@ -11,6 +11,7 @@ import HM.Env.TypeEnv
 import HM.Env.DataTypeEnv
 import HM.Type.TypeExpr
 import qualified Data.Map as M
+import qualified Data.Set as S
 import HM.Type.TypeScheme
 
 varn = VarName
@@ -45,7 +46,8 @@ consType = DataConsType
 tid = TIdentifier
 tVarName = TypeVarName
 initEnv = startEnv
-
+tcons name tts = TypeCons (TIdentifier name) tts
+tscheme tvns typeexpr = Scheme (S.fromList tvns) typeexpr
 aliasTypeEnv :: TypeEnv -> M.Map VarName String
 aliasTypeEnv (TypeEnv tenvMap) = M.map (aliasTypevar . typeExprFromScheme) tenvMap
 

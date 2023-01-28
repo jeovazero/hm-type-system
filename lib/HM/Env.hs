@@ -47,6 +47,10 @@ lookupTypeEnv var (Env (TypeEnv t) _ _) = M.lookup var t
 insertVarTypeEnv :: (VarName, TypeExpr) -> Env -> Env
 insertVarTypeEnv pair (Env t d n) = Env (insertVarTypeEnv' pair t) d n
 
+insertVarTypeSchemeEnv :: (VarName, TypeScheme) -> Env -> Env
+insertVarTypeSchemeEnv pair (Env t d n) = Env (insertVarTypeEnv'' pair t) d n
+
+
 lookupDataEnv :: ConsName -> Env -> Maybe DataScheme
 lookupDataEnv cname (Env _ (DataTypeEnv d) _) = M.lookup cname d
 

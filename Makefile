@@ -1,5 +1,5 @@
 build:
-	nix-build default.nix
+	nix build
 run:
 	runhaskell -ilib examples/Main.hs
 format:
